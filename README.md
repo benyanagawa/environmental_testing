@@ -56,6 +56,16 @@ php-config            1      22h
 
 このconfigmapでつけた名前はphp.yamlやdb.yamlで使用します。  
 
+## php環境volume mount設定
+ローカル環境ではPHPソースを外だしすることにより変更箇所が適宜確認できるため外部のディレクトリをマウントする必要があります。  
+php.yaml
+```
+        - name: app-volume
+          hostPath:
+            path: /Users/deadcode/src/scuti/environmental_testing/php_local/app
+```
+path部分に絶対パスにてmountしたいディレクトリを指定します。  
+
 ## 環境立ち上げ
 configmapを作ったら環境を立ち上げます。  
 ```
