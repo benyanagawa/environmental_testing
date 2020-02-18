@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: local-php
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: local-php
+  template:
+    metadata:
+      labels:
+        app: local-php
+    spec:
+      containers:
+        - name: local-php
+          image: hermsi/alpine-fpm-php:7.2
+          volumeMounts:
+            - mountPath: /var/www/html
+              name: app-volume
+            - mountPath: /tmp/config
+              name: php-config
+          command:
+            - sh
+            - "-c"
+            - |
+              cp /tmp/config/php.ini /usr/local/etc/php/php.ini
+              /usr/local/sbin/php-fpm
+          env:
+            - name: MYSQL_ADDR
+              value: mysql-service.default.svc.cluster.local
+            - name: PHINX_MYSQL_ADDR
+              value: mysql-service.default.svc.cluster.local
+          ports:
+            - containerPort: 9000
+        - name: local-nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - mountPath: /tmp/config
+              readOnly: true
+              name: nginx-config
+          command:
+            - sh
+            - "-c"
+            - |
+              cp /tmp/config/nginx.conf /etc/nginx/nginx.conf
+              cp /tmp/config/default.conf /etc/nginx/conf.d/default.conf
+              nginx -g "daemon off;"
+        - name: memcached
+          image: memcached:alpine
+          ports:
+            - containerPort: 11211
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+              - key: default.conf
+                path: default.conf
+        - name: php-config
+          configMap:
+            name: php-config
+            items:
+              - key: php.ini
+                path: php.ini
+        - name: app-volume
+          hostPath:
+            path: /Users/deadcode/src/scuti/environmental_testing/php_local/app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-php-service
+  labels:
+    app: local-php
+spec:
+  selector:
+    app: local-php
+  ports:
+    - port: 82
+      targetPort: 80
+  type: LoadBalancer
+
